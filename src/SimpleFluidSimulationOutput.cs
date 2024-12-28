@@ -20,7 +20,6 @@
 using PicoGK;
 using System.Numerics;
 
-
 namespace Leap71
 {
     using ShapeKernel;
@@ -32,11 +31,13 @@ namespace Leap71
             // fluid
             protected ScalarField   m_oFluidDensityField;       // density in kg/m3
             protected ScalarField   m_oFluidViscosityField;     // kin. viscosity in m2/s
+            protected ScalarField   m_oFluidTemperatureField;   // temperature in K
             protected VectorField   m_oFluidVelocityField;      // flow speed in m/s
             protected Voxels        m_voxFluidDomain;
 
             // solid part
             protected Voxels        m_voxSolidDomain;
+            protected ScalarField   m_oSolidTemperatureField;   // temperature in K
 
 
             /// <summary>
@@ -49,12 +50,15 @@ namespace Leap71
                                                 float  fFluidInletVelocity,
                                                 Voxels voxFluidDomain,
                                                 Voxels voxSolidDomain,
-                                                Voxels voxInletPatch)
+                                                Voxels voxInletPatch,
+                                                ScalarField oFluidTempField,
+                                                ScalarField oSolidTempField)
             {
                 // set domains
                 m_voxSolidDomain            = voxSolidDomain;
                 m_voxFluidDomain            = voxFluidDomain;
-
+                m_oFluidTemperatureField    = oFluidTempField;
+                m_oSolidTemperatureField    = oSolidTempField;
 
                 // generate inlet velocity vector field
                 voxInletPatch               = Sh.voxIntersect(m_voxFluidDomain, voxInletPatch);
@@ -72,14 +76,11 @@ namespace Leap71
                 m_oFluidVelocityField       = new VectorField(m_voxFluidDomain, vecDefaultVelocity);
                 VectorFieldMerge.Merge(oInletField, m_oFluidVelocityField);
 
-
                 // density scalar field from voxel field
                 m_oFluidDensityField = ScalarUtil.oGetConstScalarField(m_oFluidVelocityField, fFluidDensity);
 
-
                 // viscosity scalar field from voxel field
                 m_oFluidViscosityField = ScalarUtil.oGetConstScalarField(m_oFluidVelocityField, fFluidViscosity);
-
 
                 // write VDB file
                 OpenVdbFile oFile = new();
@@ -88,6 +89,8 @@ namespace Leap71
                 oFile.nAdd(m_oFluidVelocityField,   $"Simulation.Field_{SimulationKeyWords.m_strVelocityKey}");
                 oFile.nAdd(m_oFluidDensityField,    $"Simulation.Field_{SimulationKeyWords.m_strDensityKey}");
                 oFile.nAdd(m_oFluidViscosityField,  $"Simulation.Field_{SimulationKeyWords.m_strViscosityKey}");
+                oFile.nAdd(m_oFluidTemperatureField, $"Simulation.Field_FluidTemperature");
+                oFile.nAdd(m_oSolidTemperatureField, $"Simulation.Field_SolidTemperature");
                 oFile.SaveToFile(strVDBFilePath);
                 Library.Log($"Exported VdbFile {strVDBFilePath} successfully.");
             }
@@ -133,6 +136,24 @@ namespace Leap71
             public ScalarField oGetViscosityField()
             {
                 return m_oFluidViscosityField;
+            }
+
+            /// <summary>
+            /// Returns the fluid temperatures as a scalar field.
+            /// All values are specified in K.
+            /// </summary>
+            public ScalarField oGetFluidTemperatureField()
+            {
+                return m_oFluidTemperatureField;
+            }
+
+            /// <summary>
+            /// Returns the solid temperatures as a scalar field.
+            /// All values are specified in K.
+            /// </summary>
+            public ScalarField oGetSolidTemperatureField()
+            {
+                return m_oSolidTemperatureField;
             }
         }
 

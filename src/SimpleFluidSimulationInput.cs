@@ -31,6 +31,8 @@ namespace Leap71
             public readonly static string m_strDensityKey   = "density";
             public readonly static string m_strViscosityKey = "viscosity";
             public readonly static string m_strVelocityKey  = "velocity";
+            public readonly static string m_strFluidTemperatureKey = "fluidTemperature";
+            public readonly static string m_strSolidTemperatureKey = "solidTemperature";
         }
 
         public class SimpleFluidSimulationInput
@@ -38,6 +40,8 @@ namespace Leap71
             // fluid
             protected ScalarField   m_oFluidDensityField;       // density in kg/m3
             protected ScalarField   m_oFluidViscosityField;     // kin. viscosity in m2/s
+            protected ScalarField   m_oFluidTemperatureField;   // temperature in K
+            protected ScalarField   m_oSolidTemperatureField;   // temperature in K
             protected VectorField   m_oFluidVelocityField;      // flow speed in m/s
             protected Voxels        m_voxFluidDomain;
 
@@ -215,6 +219,24 @@ namespace Leap71
             public ScalarField oGetViscosityField()
             {
                 return m_oFluidViscosityField;
+            }
+
+            /// <summary>
+            /// Returns the fluid temperatures as a scalar field.
+            /// All values are specified in K.
+            /// </summary>
+            public ScalarField oGetTemperatureField(string strFluidOrSolid)
+            {
+                return m_oFluidTemperatureField;
+            }
+
+            /// <summary>
+            /// Returns the fluid temperatures as a scalar field.
+            /// All values are specified in K.
+            /// </summary>
+            public ScalarField oGetTemperatureField()
+            {
+                return m_oFluidTemperatureField;
             }
         }
     }

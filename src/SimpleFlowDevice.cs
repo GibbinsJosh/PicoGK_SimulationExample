@@ -31,6 +31,8 @@ namespace Leap71
             // domains
             protected Voxels        m_voxFluidDomain;
             protected Voxels        m_voxSolidDomain;
+            protected ScalarField   m_oFluidTemperatureField;
+            protected ScalarField   m_oSolidTemperatureField;
 
             // patches
             protected Voxels        m_voxInletPatch;
@@ -78,6 +80,9 @@ namespace Leap71
                 m_voxSolidDomain            = oOuterPipe.voxConstruct();
                 m_voxSolidDomain            = Sh.voxSubtract(m_voxSolidDomain, m_voxFluidDomain);
 
+                // initialise temperature fields
+                m_oFluidTemperatureField    = new ScalarField(m_voxFluidDomain, 0f);
+                m_oSolidTemperatureField    = new ScalarField(m_voxSolidDomain, 0f);
 
                 // previews
                 Voxels voxPreviewFluidDomain    = Sh.voxSubtract(m_voxFluidDomain, voxGetSegmentCut(oPipeFrame, fPipeLength, fGyroidBoundRadius, 0f, 90f));
@@ -109,8 +114,8 @@ namespace Leap71
             protected float fGetOuterRadius(float fPhi, float fLR)
             {
                 float fInnerRadius  = fGetInnerRadius(fPhi, fLR);
-                float dFlangeRadius = 10f;
-                float dWallRadius   = 2f;
+                float dFlangeRadius = 25f;
+                float dWallRadius   = 5f;
                 float fLR1          = Uf.fLimitValue((fLR - 0.0f) / 0.1f, 0f, 1f);
                 float fLR2          = Uf.fLimitValue((fLR - 0.9f) / 0.1f, 0f, 1f);
                 float dRadius       = Uf.fTransFixed(dFlangeRadius, dWallRadius, fLR1);
@@ -160,6 +165,22 @@ namespace Leap71
             public Voxels voxGetInletPatch()
             {
                 return m_voxInletPatch;
+            }
+
+            /// <summary>
+            /// Returns the fluid temperature field.
+            /// </summary>
+            public ScalarField oGetFluidTemperatureField()
+            {
+                return m_oFluidTemperatureField;
+            }
+
+            /// <summary>
+            /// Returns the solid temperature field.
+            /// </summary>
+            public ScalarField oGetSolidTemperatureField()
+            {
+                return m_oSolidTemperatureField;
             }
         }
     }
