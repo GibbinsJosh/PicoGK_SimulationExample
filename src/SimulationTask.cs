@@ -76,6 +76,20 @@ namespace Leap71
                 ScalarField oFluidTempField             = oData.oGetTemperatureField("fluid");
                 ScalarField oSolidTempField             = oData.oGetTemperatureField("solid");
 
+                // Perform heat transfer simulation
+                SimulateHeatTransfer(
+                    oFluidTempField,
+                    oSolidTempField,
+                    oVelocityField,
+                    voxFluidDomain,             // Pass fluid domain
+                    voxSolidDomain,             // Pass solid domain
+                    fDensity: 1000f,            // kg/m3
+                    fSpecificHeat: 4200f,       // J/(kg*K)
+                    fThermalConductivity: 0.6f, // W/(m*K)
+                    fTimeStep: 0.01f,           // s
+                    nIterations: 100            // Number of iterations
+                );
+
                 // get bounding box and probe fluid domain values
                 // use your own resolution / step length
                 BBox3 oBBox                     = Sh.oGetBoundingBox(voxFluidDomain);
@@ -138,6 +152,86 @@ namespace Leap71
                 Library.Log("Finished Task.");
                 return;
             }
+
+            public static void SimulateHeatTransfer(
+                ScalarField oFluidTempField,
+                ScalarField oSolidTempField,
+                VectorField oVelocityField,
+                Voxels voxFluidDomain,
+                Voxels voxSolidDomain,
+                float fDensity,
+                float fSpecificHeat,
+                float fThermalConductivity,
+                float fTimeStep,
+                int nIterations)
+            {
+                // Calculate thermal diffusivity for the solid
+                float fThermalDiffusivity = fThermalConductivity / (fDensity * fSpecificHeat);
+
+                // Get bounding boxes
+                BBox3 oFluidBBox = Sh.oGetBoundingBox(voxFluidDomain);
+                BBox3 oSolidBBox = Sh.oGetBoundingBox(voxSolidDomain);
+                float fStep = 2f; // Spatial resolution for traversal
+
+                // Perform iterations for heat transfer simulation
+                for (int iter = 0; iter < nIterations; iter++)
+                {
+                    // Loop through fluid domain
+                    for (float fZ = oFluidBBox.vecMin.Z; fZ <= oFluidBBox.vecMax.Z; fZ += fStep)
+                    {
+                        for (float fX = oFluidBBox.vecMin.X; fX <= oFluidBBox.vecMax.X; fX += fStep)
+                        {
+                            for (float fY = oFluidBBox.vecMin.Y; fY <= oFluidBBox.vecMax.Y; fY += fStep)
+                            {
+                                Vector3 vecPosition = new Vector3(fX, fY, fZ);
+
+                                // Get current fluid temperature
+                                if (oFluidTempField.bGetValue(vecPosition, out float fTempFluid))
+                                {
+                                    // Compute temperature gradients
+                                    Vector3 vecGradTemp = FieldOperations.ComputeGradient(oFluidTempField, vecPosition);
+
+                                    // Advection: velocity dot gradient
+                                    Vector3 vecVelocity = FieldOperations.GetVector(oVelocityField, vecPosition);
+                                    float fAdvection = Vector3.Dot(vecVelocity, vecGradTemp);
+
+                                    // Diffusion: Laplacian of temperature
+                                    float fDiffusion = FieldOperations.ComputeLaplacian(oFluidTempField, vecPosition) * fThermalConductivity;
+
+                                    // Update temperature using the energy equation
+                                    float fNewTempFluid = fTempFluid + fTimeStep * (-fAdvection + fDiffusion);
+                                    oFluidTempField.SetValue(vecPosition, fNewTempFluid);
+                                }
+                            }
+                        }
+                    }
+
+                    // Loop through solid domain
+                    for (float fZ = oSolidBBox.vecMin.Z; fZ <= oSolidBBox.vecMax.Z; fZ += fStep)
+                    {
+                        for (float fX = oSolidBBox.vecMin.X; fX <= oSolidBBox.vecMax.X; fX += fStep)
+                        {
+                            for (float fY = oSolidBBox.vecMin.Y; fY <= oSolidBBox.vecMax.Y; fY += fStep)
+                            {
+                                Vector3 vecPosition = new Vector3(fX, fY, fZ);
+
+                                // Get current solid temperature
+                                if (oSolidTempField.bGetValue(vecPosition, out float fTempSolid))
+                                {
+                                    // Diffusion in solid
+                                    float fDiffusion = FieldOperations.ComputeLaplacian(oSolidTempField, vecPosition) * fThermalDiffusivity;
+
+                                    // Update solid temperature
+                                    float fNewTempSolid = fTempSolid + fTimeStep * fDiffusion;
+                                    oSolidTempField.SetValue(vecPosition, fNewTempSolid);
+                                }
+                            }
+                        }
+                    }
+                }
+
+                Library.Log("Heat transfer simulation completed.");
+            }        
         }
     }
 }
